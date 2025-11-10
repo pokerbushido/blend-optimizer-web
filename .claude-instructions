@@ -1,0 +1,242 @@
+# Claude Code Workflow Instructions - MCP Optimizer v3.3
+
+## 🎯 Obiettivo
+Mantenere documentazione sincronizzata con ogni modifica al codice, 
+creando uno storico completo e chiaro per context refresh futuri.
+
+---
+
+## 📋 Workflow Standard per OGNI Modifica
+
+Dopo OGNI modifica al codice, Claude Code DEVE eseguire questi step:
+
+### Step 1: Implementa e Testa
+- Implementa la modifica richiesta
+- Esegui test di validazione
+- Verifica che tutto funzioni correttamente
+
+### Step 2: Aggiorna DEVELOPMENT_LOG.md
+Aggiungi nuova entry in cima alla sezione "📝 Modifiche Recenti":
+````markdown
+### [YYYY-MM-DD HH:MM] Titolo Breve Modifica
+**Problema**: Descrizione chiara del problema o feature richiesta
+
+**Root Cause** (solo per bug): Causa tecnica identificata
+
+**Soluzione Implementata**: 
+Descrizione della soluzione con snippet codice se rilevante
+
+**File Modificati**:
+- `file.py` (linee X-Y) - cosa è stato modificato
+- `altro_file.py` (linee A-B) - cosa è stato modificato
+
+**Test Validazione**:
+```bash
+comando test eseguito
+# ✅ Risultato atteso
+```
+
+**Commit**: `hash - tipo: messaggio`
+
+**Note**: Eventuali note aggiuntive, warning, o considerazioni
+````
+
+### Step 3: Aggiorna ARCHITECTURE.md (se necessario)
+Solo se la modifica cambia:
+- Struttura sistema
+- Logica core
+- Regole di business
+- File/moduli aggiunti o rimossi
+
+### Step 4: Aggiorna DECISIONS.md (se necessario)
+Solo se la modifica introduce:
+- Nuova decisione di design
+- Cambio di strategia
+- Scelta tecnica importante con rationale
+
+### Step 5: Commit Git
+Crea commit con messaggio descrittivo formato:
+````
+tipo: descrizione breve
+
+Dettagli opzionali se necessari
+````
+
+Tipi validi:
+- `fix:` - correzione bug
+- `feat:` - nuova feature
+- `refactor:` - refactoring senza cambio funzionalità
+- `docs:` - solo documentazione
+- `test:` - aggiunta/modifica test
+- `perf:` - miglioramento performance
+- `chore:` - manutenzione/configurazione
+
+### Step 6: Conferma Completamento
+Rispondi con summary strutturato:
+````
+✅ Modifiche completate e documentate!
+
+📝 Cosa ho fatto:
+- [descrizione modifica]
+
+📂 File modificati:
+- file.py (linee X-Y)
+
+✅ Test validati:
+- [test eseguiti]
+
+📚 Documentazione aggiornata:
+- DEVELOPMENT_LOG.md (nuova entry [data])
+- [altri file doc se aggiornati]
+
+💾 Git commit: hash - messaggio
+````
+
+---
+
+## 🎯 Template Quick Reference
+
+### Entry Log Standard
+````markdown
+### [2025-10-25 16:30] Titolo
+**Problema**: ...
+**Soluzione**: ...
+**File**: `nome.py` (linee X-Y)
+**Test**: ✅ Validato
+**Commit**: `abc123 - tipo: messaggio`
+````
+
+### Entry Log con Bug
+````markdown
+### [2025-10-25 16:30] Fix: Titolo Bug
+**Problema**: Descrizione errore
+
+**Root Cause**: 
+```python
+# VECCHIO - PROBLEMA
+codice_problematico()
+```
+
+**Fix Applicato**:
+```python
+# NUOVO - RISOLTO
+codice_corretto()
+```
+
+**File**: `nome.py` (linee X-Y)
+**Test**: ✅ Validato con test_case_name
+**Commit**: `abc123 - fix: messaggio`
+````
+
+### Entry Log Feature
+````markdown
+### [2025-10-25 16:30] Feat: Nuova Feature X
+**Obiettivo**: Cosa deve fare
+
+**Implementazione**:
+- Componente A: descrizione
+- Componente B: descrizione
+
+**File Nuovi**:
+- `nuovo_modulo.py` - scopo
+
+**File Modificati**:
+- `modulo_esistente.py` (linee X-Y) - integrazione
+
+**Test**: ✅ Validato
+**Commit**: `abc123 - feat: messaggio`
+````
+
+---
+
+## 🚨 Regole Critiche del Progetto
+
+### NON modificare senza discussione:
+1. **Duck content è ECONOMICO** - non vincolo tecnico
+2. **GWR = NWR** - sempre intercambiabili
+3. **Tolleranza DC: ±5%** - non ±3%
+4. **Articoli "P" sempre OK** - nessuna restrizione DC
+5. **Preferenza OA > A** - per bilanciare oca/anatra
+
+### Uso MCP Tool `optimize_blend`:
+⚠️ **IMPORTANTE**: NON passare il parametro `allow_estimated` se non richiesto ESPLICITAMENTE dall'utente.
+- Il sistema usa SEMPRE prima solo dati reali (più affidabili)
+- Se non trova soluzioni, suggerisce automaticamente di usare dati stimati
+- Passare `allow_estimated=true` senza richiesta esplicita riduce performance e qualità
+- **Esempio CORRETTO**: `optimize_blend(product_code="POB", quantity_kg=500, dc_target=85)`
+- **Esempio SBAGLIATO**: `optimize_blend(product_code="POB", quantity_kg=500, dc_target=85, allow_estimated=true)`
+
+### File Core da trattare con cautela:
+- `compatibility_checker.py` - logica compatibilità specie/qualità
+- `optimizer.py` - algoritmo ottimizzazione principale
+- `scorer.py` - sistema scoring multi-criterio
+- `inventory_manager.py` - parsing CSV inventario
+
+### Test obbligatori dopo modifica:
+- Se tocchi `compatibility_checker.py` → `pytest tests/test_compatibility.py`
+- Se tocchi `optimizer.py` → `pytest tests/test_optimization.py`
+- Se tocchi `scorer.py` → `pytest tests/test_scoring.py`
+- Se tocchi CSV parsing → test con file reale inventario
+
+---
+
+## 📚 Risorse Progetto
+
+- **Doc Completa**: `OPTIMIZER_V33_FINAL_CORRECTED.md`
+- **Development Log**: `DEVELOPMENT_LOG.md`
+- **Architettura**: `ARCHITECTURE.md`
+- **Decisioni Design**: `DECISIONS.md`
+- **Inventario Esempio**: `/data/inventory_example.csv`
+- **Test Suite**: `/tests/`
+
+---
+
+## 💡 Note Comportamentali
+
+### Quando documentare in dettaglio:
+- Bug critici che bloccavano funzionalità
+- Modifiche a logica core
+- Nuove feature
+- Refactoring significativi
+
+### Quando documentare brevemente:
+- Fix typo
+- Miglioramenti minori
+- Aggiustamenti formattazione
+- Aggiornamenti commenti
+
+### Quando NON documentare:
+- Mai! Anche modifiche minime vanno loggate (entry breve)
+
+---
+
+## 🔄 Manutenzione Documentazione
+
+### Ogni 20 entry in DEVELOPMENT_LOG.md:
+1. Crea archive: `docs/archives/DEVLOG_YYYY-MM.md`
+2. Sposta entry vecchie (>1 mese)
+3. Mantieni ultime 20 entry nel log principale
+
+### Ogni settimana (se richiesto):
+Crea `WEEKLY_SUMMARY.md` con:
+- Modifiche principali della settimana
+- Bug risolti
+- Feature aggiunte
+- Metriche (test, performance)
+
+---
+
+## ✅ Checklist Pre-Commit
+
+Prima di ogni commit verifica:
+- [ ] Codice testato e funzionante
+- [ ] DEVELOPMENT_LOG.md aggiornato
+- [ ] ARCHITECTURE.md aggiornato (se necessario)
+- [ ] Test di validazione eseguiti e passati
+- [ ] Commit message descrittivo e formattato
+- [ ] Nessun file sensibile o temporaneo incluso
+
+---
+
+*Seguendo queste istruzioni, ogni modifica sarà perfettamente documentata
+e tracciata, rendendo facile il context refresh in futuro!*

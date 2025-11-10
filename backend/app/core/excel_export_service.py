@@ -9,7 +9,11 @@ from io import BytesIO
 from sqlalchemy.orm import Session
 
 # Add optimizer core to path
-sys.path.insert(0, '/app/optimizer_core')
+import os
+optimizer_core_path = os.path.join(os.path.dirname(__file__), '..', '..', 'optimizer_core')
+optimizer_core_path = os.path.abspath(optimizer_core_path)
+if optimizer_core_path not in sys.path:
+    sys.path.insert(0, optimizer_core_path)
 from excel_export import export_solutions_to_excel
 from inventory import LotData
 

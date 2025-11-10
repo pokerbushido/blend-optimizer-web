@@ -11,7 +11,11 @@ from sqlalchemy.orm import Session
 from uuid import UUID, uuid4
 
 # Add optimizer core to path
-sys.path.insert(0, '/app/optimizer_core')
+import os
+optimizer_core_path = os.path.join(os.path.dirname(__file__), '..', '..', 'optimizer_core')
+optimizer_core_path = os.path.abspath(optimizer_core_path)
+if optimizer_core_path not in sys.path:
+    sys.path.insert(0, optimizer_core_path)
 from optimizer import BlendOptimizer
 from inventory import LotData, InventoryManager
 from compatibility import parse_product_code

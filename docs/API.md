@@ -554,7 +554,7 @@ Content-Disposition: attachment; filename="blend_optimization_20250104_153000.xl
 
 Attualmente non implementato. Per produzione, considerare:
 - Max requests per IP/utente
-- Timeout ottimizzazione: ~10 secondi max
+- Timeout ottimizzazione: fino a 5 minuti per richieste complesse (es. grandi quantità con vincoli specifici)
 
 ---
 

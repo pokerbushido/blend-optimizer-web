@@ -23,7 +23,8 @@ from config import (
     SCORING_WEIGHTS,
     DEFAULT_TOLERANCES,
     OPERATIONAL_LIMITS,
-    SEARCH_PARAMS
+    SEARCH_PARAMS,
+    COLOR_COMPATIBILITY_MATRIX
 )
 
 
@@ -54,10 +55,14 @@ class BlendSolution:
     meets_duck_target: bool = False
     meets_oe_target: bool = False
 
+    # Product matching
+    requested_product_match_pct: float = 0
+
     def __post_init__(self):
         """Calcola metriche dopo inizializzazione"""
         self._calculate_metrics()
         self._check_conformity()
+        self._calculate_product_match_pct()
     
     def _calculate_metrics(self):
         """Calcola tutte le metriche della miscela"""
@@ -158,6 +163,45 @@ class BlendSolution:
         else:
             self.meets_oe_target = True
     
+    def _calculate_product_match_pct(self):
+        """
+        Calcola la percentuale di kg che usa effettivamente il colore/prodotto richiesto
+
+        LOGICA:
+        - Se richiesto BPW (Pure White), calcola % di kg con qualità PW
+        - Se richiesto BNPW (Nearly Pure White), calcola % di kg con qualità NPW
+        - Se richiesto B (Bianco standard), calcola % di kg con qualità B
+
+        Questo permette all'utente di vedere quanto della miscela usa effettivamente
+        il prodotto premium richiesto vs varianti inferiori.
+        """
+        color_target = self.requirements.get('color')
+
+        if not color_target or self.total_kg == 0:
+            self.requested_product_match_pct = 100.0  # Default: 100% se non specificato
+            return
+
+        # Funzione helper per estrarre quality level (stessa usata in scoring)
+        def extract_quality_level(color_str: str) -> str:
+            if not color_str:
+                return 'B'
+            if 'NPW' in color_str:
+                return 'NPW'
+            if 'PW' in color_str:
+                return 'PW'
+            return color_str[0] if color_str else 'B'
+
+        target_quality = extract_quality_level(color_target)
+
+        # Calcola kg che corrispondono esattamente al target
+        matching_kg = sum(
+            kg for lot, kg in self.lots
+            if lot.product and lot.product.color and
+            extract_quality_level(lot.product.color) == target_quality
+        )
+
+        self.requested_product_match_pct = (matching_kg / self.total_kg) * 100.0
+
     def is_valid(self) -> bool:
         """Verifica se la soluzione è valida"""
         # FIX v3.3.5: Aggiungi controllo quantità minima richiesta
@@ -189,7 +233,8 @@ class BlendSolution:
             'meets_fp': self.meets_fp_target,
             'meets_duck': self.meets_duck_target,
             'meets_oe': self.meets_oe_target,
-            'valid': self.is_valid()
+            'valid': self.is_valid(),
+            'requested_product_match_pct': round(self.requested_product_match_pct, 1)
         }
 
 
@@ -1159,6 +1204,11 @@ class BlendOptimizer:
         score += dc_overqual_penalty
         breakdown['dc_overqualification'] = dc_overqual_penalty
 
+        # 9. Penalità product matching (colore/qualità richiesta vs utilizzata)
+        color_compat_penalty = self._score_color_compatibility(solution, requirements)
+        score += color_compat_penalty
+        breakdown['color_compatibility'] = color_compat_penalty
+
         solution.score = score
         solution.score_breakdown = breakdown
 
@@ -1354,7 +1404,101 @@ class BlendOptimizer:
                 penalty += lot_penalty * weight
 
         return penalty
-    
+
+    def _score_color_compatibility(
+        self,
+        solution: BlendSolution,
+        requirements: Dict
+    ) -> float:
+        """
+        Score per compatibilità colore prodotto richiesto vs lotti utilizzati
+
+        PRINCIPIO: Quando si richiede un prodotto con qualità colore specifica (es. PABPW),
+        usare lotti con qualità inferiore (es. PAB) deve essere penalizzato proporzionalmente
+        alla differenza di qualità.
+
+        LOGICA:
+        - Estrae quality level richiesto (BPW -> PW, BNPW -> NPW, B -> B)
+        - Estrae quality level di ogni lotto nella soluzione
+        - Consulta COLOR_COMPATIBILITY_MATRIX per ottenere penalità
+        - Applica penalità proporzionale ai kg utilizzati
+
+        ESEMPI:
+        - Richiesto: PABPW (color='BPW', quality='PW')
+        - Lotto: PAB (color='B', quality='B')
+        - Penalità da matrice: B->PW = -150
+        - Se uso 1000kg di PAB su 1000kg totali -> penalità totale = -150
+
+        - Richiesto: PABPW (color='BPW', quality='PW')
+        - Lotto mix: 500kg PABPW + 500kg PAB su 1000kg totali
+        - Penalità: 0*(500/1000) + (-150)*(500/1000) = -75
+
+        Returns:
+            float: Penalità (negativa) o 0 se tutti i lotti corrispondono
+        """
+        color_target = requirements.get('color')
+
+        # Se non c'è requisito colore, nessuna penalità
+        if not color_target:
+            return 0
+
+        # Funzione helper per estrarre quality level
+        def extract_quality_level(color_str: str) -> str:
+            """
+            Estrae il livello di qualità dal codice colore
+
+            BPW -> PW (Bianco Pure White -> Pure White quality)
+            BNPW -> NPW (Bianco Nearly Pure White -> Nearly Pure White quality)
+            B -> B (Bianco standard)
+            G -> G (Grigio)
+            PW -> PW (Pure White puro)
+            """
+            if not color_str:
+                return 'B'  # Default fallback
+
+            # Se contiene NPW, estrai NPW
+            if 'NPW' in color_str:
+                return 'NPW'
+
+            # Se contiene PW (ma non NPW), estrai PW
+            if 'PW' in color_str:
+                return 'PW'
+
+            # Altrimenti usa il primo carattere (B, G, R)
+            return color_str[0] if color_str else 'B'
+
+        # Estrai quality richiesto
+        target_quality = extract_quality_level(color_target)
+
+        # Se il target quality non è nella matrice, nessuna penalità
+        # (colori come R non hanno regole specifiche)
+        if target_quality not in COLOR_COMPATIBILITY_MATRIX:
+            return 0
+
+        # Calcola penalità totale ponderata
+        total_penalty = 0
+
+        for lot, kg_used in solution.lots:
+            lot_color = lot.product.color if lot.product and lot.product.color else 'B'
+            lot_quality = extract_quality_level(lot_color)
+
+            # Se il lotto quality non è nella matrice per questo target, skip
+            # (non dovrebbe accadere grazie al filtering, ma per sicurezza)
+            if lot_quality not in COLOR_COMPATIBILITY_MATRIX:
+                continue
+
+            # Consulta matrice: matrix[lot_quality][target_quality]
+            if target_quality in COLOR_COMPATIBILITY_MATRIX[lot_quality]:
+                penalty_value = COLOR_COMPATIBILITY_MATRIX[lot_quality][target_quality]
+
+                # Peso proporzionale ai kg utilizzati
+                weight = kg_used / solution.total_kg if solution.total_kg > 0 else 0
+
+                # Accumula penalità ponderata
+                total_penalty += penalty_value * weight
+
+        return total_penalty
+
     def simulate_blend(
         self,
         lot_composition: Dict[str, float],

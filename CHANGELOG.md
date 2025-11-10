@@ -18,6 +18,40 @@ e questo progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0
 
 ---
 
+## [1.1.0] - 2025-11-10
+
+### Added
+- **Color Compatibility Scoring**: Nuova metrica per penalizzare l'uso di lotti con qualità colore inferiore rispetto a quella richiesta
+  - Implementata `COLOR_COMPATIBILITY_MATRIX` per gestire penalità tra diversi livelli di qualità (PW, NPW, B)
+  - Metodo `_score_color_compatibility()` per calcolare penalità proporzionali ai kg utilizzati
+- **Product Match Percentage**: Nuova metrica `requested_product_match_pct` nelle soluzioni di blend
+  - Calcola la percentuale di kg che utilizza esattamente il colore/qualità richiesto
+  - Visibile nei risultati per aiutare l'utente a capire quanto della miscela usa il prodotto premium richiesto
+
+### Changed
+- **Timeout Aumentati per Ottimizzazioni Complesse**:
+  - Frontend API client: timeout portato da 30s a 300s (5 minuti)
+  - Nginx proxy: aggiunti timeout settings (connect: 60s, send/read: 300s)
+  - Documentazione API: aggiornata nota timeout da ~10s a "fino a 5 minuti per richieste complesse"
+
+### Fixed
+- **Path Dinamico Optimizer Core**: Risolto problema hardcoded path `/app/optimizer_core`
+  - `excel_export_service.py`: calcolo dinamico path relativo
+  - `inventory_service.py`: calcolo dinamico path relativo
+  - `optimizer_service.py`: calcolo dinamico path relativo
+  - Migliora portabilità del codice tra ambienti (Docker, locale, test)
+- **Config Validation**: Aggiunti validatori Pydantic per parsing corretto di variabili d'ambiente
+  - `BACKEND_CORS_ORIGINS`: supporto parsing JSON string
+  - `ALLOWED_EXTENSIONS`: supporto parsing JSON string
+  - Aggiunta configurazione `extra = "ignore"` per ignorare variabili extra
+
+### Technical Improvements
+- Migliorata robustezza del sistema di scoring ottimizzatore con nuove metriche qualitative
+- Aggiunta gestione sicura dei path per compatibilità cross-platform
+- Estesa validazione configurazione backend per deployment più flessibile
+
+---
+
 ## [1.0.0] - 2025-01-10
 
 ### Added - Rilascio Iniziale
@@ -140,7 +174,8 @@ e questo progetto aderisce al [Semantic Versioning](https://semver.org/spec/v2.0
 
 ## Link Versioni
 
-- [Unreleased]: https://github.com/pokerbushido/blend-optimizer-web/compare/v1.0.0...HEAD
+- [Unreleased]: https://github.com/pokerbushido/blend-optimizer-web/compare/v1.1.0...HEAD
+- [1.1.0]: https://github.com/pokerbushido/blend-optimizer-web/compare/v1.0.0...v1.1.0
 - [1.0.0]: https://github.com/pokerbushido/blend-optimizer-web/releases/tag/v1.0.0
 
 ---

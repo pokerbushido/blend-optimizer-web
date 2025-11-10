@@ -12,7 +12,11 @@ from uuid import UUID
 import re
 
 # Add optimizer core to path
-sys.path.insert(0, '/app/optimizer_core')
+import os
+optimizer_core_path = os.path.join(os.path.dirname(__file__), '..', '..', 'optimizer_core')
+optimizer_core_path = os.path.abspath(optimizer_core_path)
+if optimizer_core_path not in sys.path:
+    sys.path.insert(0, optimizer_core_path)
 from inventory import InventoryManager as CoreInventoryManager
 
 from app.models.models import InventoryLot, InventoryUpload, User

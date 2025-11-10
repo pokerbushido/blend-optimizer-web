@@ -6,7 +6,7 @@ import { useAuthStore } from '@/store/auth.store'
 // Create axios instance
 const apiClient: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
-  timeout: 30000,
+  timeout: 300000, // 5 minutes - needed for complex blend optimizations
   headers: {
     'Content-Type': 'application/json',
   },
