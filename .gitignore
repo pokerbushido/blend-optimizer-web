@@ -81,3 +81,5 @@ dump.rdb
 # Backup
 *.bak
 backup/
+.env.docker
+env.docker
